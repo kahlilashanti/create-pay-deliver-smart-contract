@@ -1,5 +1,23 @@
 pragma solidity ^0.8.7;
 
+//create code to ensure you have to be the owner to perform certain transactions
+contract Ownable {
+    address payable _owner;
+
+    constructor() public {
+        _owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(isOwner(), "you are not the owner");
+        _;
+    }
+
+    function isOwner() public view returns (bool) {
+        return (msg.sender == _owner);
+    }
+}
+
 //it is better to hand off payment to a different contract to keep the logic readable and minimize
 //gas fees
 contract Item {
@@ -43,7 +61,7 @@ contract Item {
     fallback() external {}
 }
 
-contract ItemManager {
+contract ItemManager is Ownable {
     //represents the state of the supply chain
     enum SupplyChainState {
         Created,
@@ -71,7 +89,10 @@ contract ItemManager {
         address _itemAddress
     );
 
-    function createItem(string memory _identifier, uint256 _itemPrice) public {
+    function createItem(string memory _identifier, uint256 _itemPrice)
+        public
+        onlyOwner
+    {
         Item item = new Item(this, _itemPrice, itemIndex);
         items[itemIndex]._item = item;
         items[itemIndex]._identifier = _identifier;
@@ -107,7 +128,7 @@ contract ItemManager {
         );
     }
 
-    function triggerDelivery(uint256 _itemIndex) public {
+    function triggerDelivery(uint256 _itemIndex) public onlyOwner {
         require(
             items[_itemIndex]._state == SupplyChainState.Paid,
             "Item is further in the chain"
